@@ -10,6 +10,7 @@ It is distilled from a real, shipped webOS TV app and captures the parts that ar
 - **Build / package / deploy** — `vite build` → `ares-package` → install over SSH (works around the `@webos-tools/cli` Node-version breakage), plus the Developer-Mode passphrase rotation gotcha.
 - **On-device debugging** — Chrome DevTools Protocol over an SSH tunnel: console, exceptions, performance metrics, network timing through the proxy, and **self-driving** the app with injected key events + screenshots so an agent can operate and verify without a human.
 - **Media pitfalls** — DASH needs an MSE player (Shaka), flat retry delays instead of exponential backoff, prefer stable origin CDN over flaky PCDN, resume via `load(startTime)`.
+- **Testing & verification** — a layered release pipeline (syntax gate → the real service under docker `node:8` → build → deploy → CDP assertions), old-device testing without old devices (LG's emulator stops at webOS 6.0 and is x86-only), and the verification discipline: positive controls, failure-path tests, verify-the-instrument-first.
 
 ## Layout
 
@@ -20,7 +21,8 @@ webos-tv-skill/
 │   ├── service-and-proxy.md          # Luna service + local proxy, full skeleton
 │   ├── focus-system.md               # zero-render D-pad focus engine
 │   ├── performance.md                # the TV performance rule set
-│   └── debug-toolchain.md            # CDP-over-SSH debugging, deploy, streaming
+│   ├── debug-toolchain.md            # CDP-over-SSH debugging, deploy, streaming
+│   └── testing.md                    # release pipeline, Node-8 testing, verification discipline
 ├── README.md
 └── LICENSE
 ```

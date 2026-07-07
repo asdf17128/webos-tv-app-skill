@@ -13,6 +13,7 @@ Read this file first. It is a map. The longer code lives in `reference/`:
 - `reference/focus-system.md` — zero-render D-pad focus engine
 - `reference/performance.md` — the TV performance rule set, with CSS/JSX
 - `reference/debug-toolchain.md` — CDP-over-SSH debugging, self-driving, screenshots, netcap
+- `reference/testing.md` — release pipeline, old-device (Node 8) testing, verification discipline
 
 ---
 
@@ -192,6 +193,31 @@ Hard-won, from `reference/debug-toolchain.md` (streaming section):
 - **Resume via `player.load(url, startTime)`, not load-at-0-then-seek** — the latter double-buffers and wastes bandwidth.
 - A **stall watchdog** (nudge `currentTime` if playback hasn't advanced for >8s) recovers from soft freezes.
 - Disable the player's ABR if you have a manual quality selector (`abr: { enabled: false }`); re-fetch the play URL on quality change rather than packing every rep into one manifest.
+
+---
+
+## 7. Testing & verification
+
+Full treatment in `reference/testing.md`. The parts people skip and regret:
+
+- **Release pipeline, layered fail-fast:** ES2017 syntax gate on service files →
+  run the *real* service under **docker `node:8`** (webOS 5's actual service
+  runtime; LG's emulator only covers ≤6.0, is x86-only, and won't run on Apple
+  Silicon) → build → deploy → CDP assertions on the live app.
+- **Node 8 forbidden list** for services: `URL`/`URLSearchParams` globals
+  (use `require('url').URL`), `globalThis`, `?.`/`??`, `ws@8`. A `new URL`
+  inside try/catch once turned every request on webOS 5 into a silent
+  "Invalid URL" — service up, app error-free, all screens empty.
+- **Positive control:** a fix is verified only if the same harness reproduces
+  the bug on the pre-fix build first. Two consecutive "verified" fixes shipped
+  broken here before this rule existed.
+- **Failure paths are part of the spec** — cut the network and assert the error
+  text reaches the screen, especially for diagnostics features.
+- **Verify the instrument before the product** when results look impossible —
+  TV-side CDP mouse injection can silently die; in-page event counters expose it.
+- **Interaction semantics** (hover/wheel/click) want a trusted input pipeline:
+  desktop Playwright (`page.mouse`) + disabled TV bridge + mocked feeds, not
+  synthetic `dispatchEvent`.
 
 ---
 
