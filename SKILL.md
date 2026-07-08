@@ -14,6 +14,7 @@ Read this file first. It is a map. The longer code lives in `reference/`:
 - `reference/performance.md` — the TV performance rule set, with CSS/JSX
 - `reference/debug-toolchain.md` — CDP-over-SSH debugging, self-driving, screenshots, netcap
 - `reference/testing.md` — release pipeline, old-device (Node 8) testing, verification discipline
+- `reference/design.md` — 10-foot design: type scale, focus, safe area, restraint, old-Chromium compat
 
 ---
 
@@ -196,7 +197,26 @@ Hard-won, from `reference/debug-toolchain.md` (streaming section):
 
 ---
 
-## 7. Testing & verification
+## 7. 10-foot design rules
+
+Full treatment in `reference/design.md` (distilled from tvOS HIG + webOS design principles).
+The essentials people get wrong:
+
+- **Type scale at 1080p:** Display 30–32 / Title 22–24 / Body 20 / Caption 18 (floor for
+  readable text) / Badge 16 (glanceable only). Nothing visible under 16px — a dev monitor
+  at 60cm overstates legibility ~4x vs the couch.
+- **Focus is sacred:** one unmistakable focused element, always; no focus islands — every
+  region reachable by D-pad.
+- **Floating UI mounts at the root** (ancestor `overflow` clips silently; rects won't show it).
+- **Restraint:** thin filling progress lines over big numbers; one primary action per screen.
+- **Old-Chromium floor:** no `aspect-ratio` (webOS 5/6 = Chromium 68/79); padding-top hack
+  needs absolutely-positioned children.
+- **Enforce with greps in the release gate** — every rule above earned its grep by shipping
+  broken once.
+
+---
+
+## 8. Testing & verification
 
 Full treatment in `reference/testing.md`. The parts people skip and regret:
 
