@@ -167,3 +167,55 @@ Rules that exist because their violations each burned a release:
   clean-state test, close it first or reload via CDP `Page.reload`.
 - Long-lived test scripts must use ephemeral local ports for SSH tunnels — a
   fixed port + a lingering process = every later run dies confusingly.
+
+## 5. Official dev loop & device matrix [2026-07]
+
+Researched from the current SDK docs (webostv.developer.lge.com) — the tooling moved a
+lot in 2024–26; the old "webOS TV CLI" and VS Code extension are deprecated.
+
+**The fast dev loop — hosted mode (no repackaging):**
+
+```bash
+ares-launch --hosted ./appDir -d tv     # serves the dir from your machine, TV runs it
+ares-launch -H ./appDir -I 192.168.x.x  # -I when multi-NIC autodetect picks wrong
+ares-server ./appDir --open             # plain local server (port 7496)
+```
+
+Hosted mode auto-reloads the TV on every file save (CLI ≥1.12); a gitignore-style
+`.reloadignore` filters which saves trigger it. Caveat: apps with JS services can't run
+hosted; hosted apps in background get killed like any other. This beats the
+package→install→launch cycle for UI iteration; still do a packaged install before sign-off
+(hosted origin ≠ packaged file:// — storage and CORS behave differently).
+
+**Simulator (webOS 6.0, 22–26) — `ares-launch -s 24 ./appDir`:**
+
+- Per-version desktop builds; macOS ARM64 native from webOS 22 on (the webOS 26 simulator
+  is ARM64-*only*). Install via webOS Studio's Package Manager; found via
+  `LG_WEBOS_TV_SDK_HOME`.
+- Runs the TV-matching Chromium, simulates Luna/webOSSystem (with gaps), full RCU
+  including color keys with real key codes, auto-opens Web Inspector, auto-reloads.
+- **Can't do: DRM, mediaOption, real A/V decode specs** — playback validation stays on
+  hardware. Community warning: apps that pass the 6.0 Simulator have broken on the 6.0
+  Emulator — simulator Chromium ≠ TV build; treat it as a fast UI/API harness, not proof.
+- Coverage strategy by version: ≤6.x → x86 VirtualBox Emulator (or the desktop-Chromium +
+  docker-Node substitutes in §2); 6.0/22+ → Simulator; always → real TV for media/perf.
+
+**Web Inspector version-matching:** the TV's DevTools endpoint is old — LG says drive it
+with Chrome v38 (webOS 3.x–5.0), v68 (6.0–24), latest (25+). Modern-Chrome frontends
+half-work against old targets; raw CDP over WebSocket (debug-toolchain.md) sidesteps this.
+
+**Perf from the CLI:** `ares-device-info -d tv -r` (system CPU/mem), `-r -id com.your.app`
+(one app), `-r -s out.csv -t 1` (1s-interval CSV — graph it). GUI: Resource Monitor
+(webOS 6.0+, replaces Beanviser). LG expects a perf pass before store submission.
+
+**Real-device farms / staged rollout:** Seller Lounge has a **Cloud Test Lab** pre-test and
+**Alpha Test** (invisible publish to registered TVs) — both seller-account-gated. Third
+party: Suitest (real LG TV lab + virtual remote), `appium-lg-webos-driver` (Appium over
+ares+CDP). Store QA: pretest + function + content test, **every update re-enters full
+review**, community-reported turnaround runs to weeks — batch your releases.
+
+**CLI v3 notes (@webos-tools/cli):** unified multi-profile tool (`ares-config --profile tv`);
+default device creds now `prisoner`@port `9922`; `--remainPlainIPK` and `--app-exclude`
+on ares-package (the latter replaces hand-rolled `-e` exclude lists). Node ≥16.20 required —
+the "official CLI only supports Node 14–16" era is over; if a modern Node still throws
+util.isDate errors you are on the old `@webosose/ares-cli`, switch packages.

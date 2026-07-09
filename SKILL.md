@@ -13,8 +13,12 @@ Read this file first. It is a map. The longer code lives in `reference/`:
 - `reference/focus-system.md` — zero-render D-pad focus engine
 - `reference/performance.md` — the TV performance rule set, with CSS/JSX
 - `reference/debug-toolchain.md` — CDP-over-SSH debugging, self-driving, screenshots, netcap
-- `reference/testing.md` — release pipeline, old-device (Node 8) testing, verification discipline
+- `reference/testing.md` — release pipeline, old-device (Node 8) testing, verification
+  discipline, official dev loop (hosted mode, Simulator, perf CLI, device matrix)
 - `reference/design.md` — 10-foot design: type scale, focus, safe area, restraint, old-Chromium compat
+- `reference/platform.md` — engine matrix (webOS 3.x–26), webOSTV.js, open Luna services,
+  lifecycle/suspension, storage truths (localStorage wiped on update; db8), mediaOption,
+  CORS/TLS reality, input
 
 ---
 
@@ -148,7 +152,14 @@ node tools/deploy.mjs
 
 **Deploy gotchas:**
 
-- The official `@webos-tools/cli` only supports Node 14–16; on a modern Node it throws (e.g. `isDate is not a function`). The robust path is a custom `deploy.mjs` using the `ssh2` library: SSH in, `sftp` the `.ipk` up, then `luna-send-pub` `dev/install` followed by `applicationmanager/launch`. Full script in `reference/debug-toolchain.md`.
+- `isDate is not a function` on modern Node means you're on the old CLI — current
+  `@webos-tools/cli` v3.2+ supports Node 16–24 (until then, a `--require` shim for
+  util.isDate/isRegExp/isError also works). Alternative robust path: a custom `deploy.mjs`
+  using the `ssh2` library: SSH in, `sftp` the `.ipk` up, then `luna-send-pub` `dev/install`
+  followed by `applicationmanager/launch`. Full script in `reference/debug-toolchain.md`.
+- For UI iteration skip packaging entirely: `ares-launch --hosted ./appDir -d tv` serves
+  the app from your machine with auto-reload on save (no JS services in hosted mode);
+  `ares-launch -s 24 ./appDir` runs the official Simulator. Details in `reference/testing.md` §5.
 - **Developer Mode passphrase rotates.** The SSH key passphrase comes from the TV's Developer Mode app and changes when the dev session is renewed. If SSH auth fails, re-read the current passphrase from the app and re-fetch the key (`ares-novacom --device tv --getkey`). Pass it as a CLI arg so it's never hard-coded.
 - The TV uses an `ssh-rsa` host key — set `algorithms: { serverHostKey: ['ssh-rsa'] }`.
 
@@ -257,5 +268,9 @@ Full treatment in `reference/testing.md`. The parts people skip and regret:
 | Service dies after a while | uncaught exception / no keepAlive | `process.on('uncaughtException')` + `activityManager` keepAlive |
 | Media range/length corrupt | proxy forwarded gzip | force `Accept-Encoding: identity` on the byte path |
 | Deploy auth fails | Dev Mode passphrase rotated | re-read passphrase, re-fetch SSH key |
+| User settings vanish after update | packaged-app localStorage/IDB wiped on app update | keep durable state in db8 (`com.palm.db`) |
+| 4K stream tops out at 1080p | native-HLS ABR default caps at 1920×1080 | mediaOption `adaptiveStreaming.maxWidth/maxHeight` |
+| Second video element blacks out first | one media pipeline per app | src-swap a single `<video>` + `.load()` |
+| HTTPS works in browser, dies on TV | self-signed/untrusted cert fails silently for XHR/WSS | real cert (LE ≥ webOS 5.0) or plain HTTP on LAN |
 | Hook infinite loop | callback in `useEffect` deps | store callback in `useRef` |
 | CDN 403 | sent `Origin` header to CDN | drop `Origin` on CDN requests |
