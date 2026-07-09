@@ -187,11 +187,35 @@ hosted; hosted apps in background get killed like any other. This beats the
 package→install→launch cycle for UI iteration; still do a packaged install before sign-off
 (hosted origin ≠ packaged file:// — storage and CORS behave differently).
 
+Verified on real hardware (webOS 24, 2026-07):
+- **Multi-NIC machines (VPN/Clash virtual interfaces) silently break autodetect** — the
+  stub loads a dead IP and the TV sits on a blank stub forever. Always pass `-I <lan-ip>`.
+- The mechanism is a stub app (`com.sdk.ares.hostedapp`) containing an **iframe** pointed
+  at `http://<host-ip>:<random-port>/`. Consequences: your app's origin is that http URL —
+  **localStorage/IndexedDB are separate from the packaged install** (fresh state every
+  hosted session), and CORS applies as a normal http origin (packaged apps send no Origin).
+  Don't sign off origin-sensitive behavior from hosted mode.
+- CDP debugging: inspect `com.sdk.ares.hostedapp`, then evaluate in the **http execution
+  context** (pick it from `Runtime.executionContextCreated` by origin) — the default
+  context is the file:// stub where your app's globals don't exist.
+- Hot reload verified: `touch` any file under the app dir → TV reloads in ~2–5s.
+
 **Simulator (webOS 6.0, 22–26) — `ares-launch -s 24 ./appDir`:**
 
 - Per-version desktop builds; macOS ARM64 native from webOS 22 on (the webOS 26 simulator
-  is ARM64-*only*). Install via webOS Studio's Package Manager; found via
-  `LG_WEBOS_TV_SDK_HOME`.
+  is ARM64-*only*). Install via webOS Studio's Package Manager, via
+  `LG_WEBOS_TV_SDK_HOME`, or point the CLI directly: `ares-launch -s 24 -sp <dir> <appDir>`.
+- **Scripted download without webOS Studio** (endpoints mined from webos-studio source,
+  verified 2026-07): `https://developer.lge.com/resource/tv/RetrieveToolLastVersion.dev?resourceId=RS00007585`
+  lists every simulator zip with a `fileId`; then
+  `.../RetrieveToolDownloadUrl.dev?fileId=<id>` returns a `gftsUrl` direct link
+  (e.g. RF00020813 = webOS_TV_24 mac-arm64, 105 MB). The naive
+  `RetrieveToolDownload.dev?fileName=...` URL returns an HTML error page — `file` the
+  download before unzipping.
+- **Not automatable**: launching the (Electron) simulator with `--remote-debugging-port`
+  opens the port and prints a browser ws URL, but the DevTools HTTP/WS endpoints never
+  answer — puppeteer can't attach. Treat the Simulator as a manual/visual tool; automated
+  runs stay on desktop-Chromium harnesses + real-TV CDP.
 - Runs the TV-matching Chromium, simulates Luna/webOSSystem (with gaps), full RCU
   including color keys with real key codes, auto-opens Web Inspector, auto-reloads.
 - **Can't do: DRM, mediaOption, real A/V decode specs** — playback validation stays on
@@ -204,8 +228,10 @@ package→install→launch cycle for UI iteration; still do a packaged install b
 with Chrome v38 (webOS 3.x–5.0), v68 (6.0–24), latest (25+). Modern-Chrome frontends
 half-work against old targets; raw CDP over WebSocket (debug-toolchain.md) sidesteps this.
 
-**Perf from the CLI:** `ares-device-info -d tv -r` (system CPU/mem), `-r -id com.your.app`
-(one app), `-r -s out.csv -t 1` (1s-interval CSV — graph it). GUI: Resource Monitor
+**Perf from the CLI:** the command is **`ares-device`** in CLI v3 (`ares-device-info`
+still exists as a stub but outputs nothing — a silent trap). Verified:
+`ares-device -d tv -r -l -t 1 -s out.csv` → per-app `TIME,PID,ID,CPU(%),MEMORY(%),MEMORY(KB)`
+rows every second; `-r -id com.your.app` filters one app. GUI: Resource Monitor
 (webOS 6.0+, replaces Beanviser). LG expects a perf pass before store submission.
 
 **Real-device farms / staged rollout:** Seller Lounge has a **Cloud Test Lab** pre-test and
