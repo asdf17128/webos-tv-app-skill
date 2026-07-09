@@ -204,9 +204,14 @@ The essentials people get wrong:
 
 - **Type scale at 1080p:** Display 30–32 / Title 22–24 / Body 20 / Caption 18 (floor for
   readable text) / Badge 16 (glanceable only). Nothing visible under 16px — a dev monitor
-  at 60cm overstates legibility ~4x vs the couch.
+  at 60cm overstates legibility ~4x vs the couch. For a store submission LG's QA floor
+  is stricter: **all text ≥20px**.
 - **Focus is sacred:** one unmistakable focused element, always; no focus islands — every
-  region reachable by D-pad.
+  region reachable by D-pad. The platform-native treatment is Sandstone's light fill
+  (`#e6e6e6` bg + dark text + weight 600 + 200ms), not an outline; a visible selection
+  effect on every object is a store-blocking requirement.
+- **Safe zone:** 60px top/bottom + **90px** sides for full-bleed overlays (tvOS official —
+  not the often-quoted 80); LG's absolute edge minimum is 20px.
 - **Floating UI mounts at the root** (ancestor `overflow` clips silently; rects won't show it).
 - **Restraint:** thin filling progress lines over big numbers; one primary action per screen.
 - **Old-Chromium floor:** no `aspect-ratio` (webOS 5/6 = Chromium 68/79); padding-top hack
