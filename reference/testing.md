@@ -167,6 +167,23 @@ Rules that exist because their violations each burned a release:
   clean-state test, close it first or reload via CDP `Page.reload`.
 - Long-lived test scripts must use ephemeral local ports for SSH tunnels — a
   fixed port + a lingering process = every later run dies confusingly.
+- **Build testability hooks instead of lowering the bar.** "Can't test it" must
+  mean "add test capability", not "ship unverified". A `window.__openDeepLink(...)`
+  hook registered by the app root (calling the same production handler as a real
+  key press) lets a CDP harness jump straight to any content — no fragile
+  20-keypress UI navigation to reach a test fixture. Find fixtures with the right
+  traits (subtitles, chapters, multi-part) by querying the platform APIs from the
+  page first, then deep-link to them.
+- **Transient UI (auto-hiding bubbles/overlays) vs slow screenshot channels:**
+  keep it alive with an in-page `setInterval` dispatching synthetic
+  `KeyboardEvent('keydown')` every ~700ms while a second connection takes the
+  screenshot, then clear the interval. Synthetic (untrusted) events are fine for
+  app-level keydown handlers; you only need trusted input for browser-native
+  behaviors.
+- Dev-in-browser fallback detection: SDK bridge libraries (webOSTV.js) happily
+  define `window.webOS.service` in ANY browser — gate "am I on the TV?" on the
+  underlying bridge (`window.PalmServiceBridge`), or every dev-mode request dies
+  on the Luna path instead of falling back to your dev proxy.
 
 ## 5. Official dev loop & device matrix [2026-07]
 
