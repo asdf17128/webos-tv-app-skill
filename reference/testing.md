@@ -180,6 +180,15 @@ Rules that exist because their violations each burned a release:
   screenshot, then clear the interval. Synthetic (untrusted) events are fine for
   app-level keydown handlers; you only need trusted input for browser-native
   behaviors.
+- **The Magic Remote wheel is velocity-sensitive and undocumented**: a slow
+  notch sends `deltaY=120`, a fast one `200` (measured on a 2024 C4; the official
+  docs only say "same as mouse wheel"). Pixel-accumulation scrolling therefore
+  cannot make "one notch = one row" hold — any fixed threshold kills either the
+  slow or the fast notch. Model INTENT instead: any event with |deltaY| ≥ ~100 is
+  one notch → exactly one row (rate-capped, no carry); only smaller deltas (the
+  pointer edge-zone auto-stream) should accumulate. Ship an always-on ring-buffer
+  diagnostic (`window.__wheelDiag` recording per-event decisions) — wheel-feel bugs
+  are unreproducible without the user's real event stream.
 - Dev-in-browser fallback detection: SDK bridge libraries (webOSTV.js) happily
   define `window.webOS.service` in ANY browser — gate "am I on the TV?" on the
   underlying bridge (`window.PalmServiceBridge`), or every dev-mode request dies
