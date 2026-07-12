@@ -238,10 +238,30 @@ Verified on real hardware (webOS 24, 2026-07):
   (e.g. RF00020813 = webOS_TV_24 mac-arm64, 105 MB). The naive
   `RetrieveToolDownload.dev?fileName=...` URL returns an HTML error page — `file` the
   download before unzipping.
-- **Not automatable**: launching the (Electron) simulator with `--remote-debugging-port`
-  opens the port and prints a browser ws URL, but the DevTools HTTP/WS endpoints never
-  answer — puppeteer can't attach. Treat the Simulator as a manual/visual tool; automated
-  runs stay on desktop-Chromium harnesses + real-TV CDP.
+- **Fully CDP-automatable — but with a non-obvious unblock (verified webOS 24, 2026-07).**
+  First attempt looked impossible: `--remote-debugging-port` opens the TCP port and prints
+  a browser ws URL, but `/json` and the ws endpoint hang. **Root cause:** `ares-launch -s`
+  launches the sim then exits, tearing down the companion relay it started; the sim's main
+  process was mid-HTTP to it, throws an uncaught `socket hang up`, and Electron pops a
+  **modal** error dialog. That modal blocks the main message loop, which freezes the
+  DevTools HTTP thread — port open, nothing answers. **Fix: dismiss the dialog** (poll
+  `osascript … click button "OK"`), and CDP immediately comes alive at the exact TV
+  Chromium (108.0.5359.x). Launch pattern that works:
+  ```bash
+  # raw binary (NOT ares-launch) so you can pass the debug flag; then auto-dismiss the modal
+  "$SIM.app/Contents/MacOS/$SIM" "$APP_DIR" --remote-debugging-port=9333 --remote-allow-origins='*' &
+  for i in $(seq 1 40); do
+    osascript -e 'tell application "System Events" to click button "OK" of window 1 of (first process whose name contains "webOS_TV_24")' 2>/dev/null
+    curl -s --noproxy '*' http://127.0.0.1:9333/json/version | grep -q Chrome && break
+    sleep 0.5
+  done
+  # then /json/list → the app page's webSocketDebuggerUrl → drive + assert exactly like real-TV CDP
+  ```
+  Now the Simulator runs the same synthetic-key + DOM-assertion harness as the TV, at the
+  TV's exact Chromium — catching engine-version regressions the dev-browser can't. Still
+  can't decode (no A/V, no DRM, no mediaOption): playback asserts return err:4, so real
+  decode/perf stay on hardware. Its file:// origin is CORS-exempt like the TV (verified
+  fetching a real CDN).
 - Runs the TV-matching Chromium, simulates Luna/webOSSystem (with gaps), full RCU
   including color keys with real key codes, auto-opens Web Inspector, auto-reloads.
 - **Can't do: DRM, mediaOption, real A/V decode specs** — playback validation stays on
