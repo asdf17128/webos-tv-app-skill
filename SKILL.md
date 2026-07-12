@@ -274,3 +274,6 @@ Full treatment in `reference/testing.md`. The parts people skip and regret:
 | HTTPS works in browser, dies on TV | self-signed/untrusted cert fails silently for XHR/WSS | real cert (LE ≥ webOS 5.0) or plain HTTP on LAN |
 | Hook infinite loop | callback in `useEffect` deps | store callback in `useRef` |
 | CDN 403 | sent `Origin` header to CDN | drop `Origin` on CDN requests |
+| Simulator CDP port open but `/json` hangs | Electron modal error dialog freezes the DevTools thread | dismiss the dialog (`osascript … click "OK"`), then CDP works — see testing.md §5 |
+| Hosted mode shows blank stub | multi-NIC autodetect picked a dead IP | pass `-I <lan-ip>` to `ares-launch --hosted` |
+| `ares-device-info` prints nothing | renamed in CLI v3 | use `ares-device -r` for resource monitoring |
