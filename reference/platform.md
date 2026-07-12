@@ -77,9 +77,26 @@ you cannot request more. Settings writes, audio routing, notifications: effectiv
 
 ## Media element specifics
 
-- **One media pipeline, period** (official FAQ): a second `<video>`/`<audio>` play() blacks
-  out the first. Channel zapping = src-swap on one element + `video.load()` after changing
-  src (needed on webOS to actually release/rebind the pipeline).
+- **One media pipeline, period** (official FAQ + empirically confirmed on a C4 / webOS 24,
+  2026-07): a second `<video>`/`<audio>` play() blacks out the first. Test result: 4 native
+  `<video>` elements loaded real HLS, all reached readyState 4 / videoWidth set, but **only
+  the last-played one advanced currentTime** — the others froze. MSE is no escape: it feeds
+  the *same* single hardware decoder (a second hls.js stream steals it too). So there is no
+  "1 native + N MSE" concurrency. Channel zapping = src-swap on one element + `video.load()`
+  after changing src (needed on webOS to actually release/rebind the pipeline).
+- **No multi-view / split-screen / PiP for a web app.** LG's consumer Multi-View is real
+  (service `com.webos.service.multiviewcontroller`, methods `launchApps`/`changeMode`/
+  `switchAudio`/…) but its LS2 client-permissions allowlist is **LG system components only**
+  (`com.webos.app.multiviewsettings`, `/usr/bin/mvclient`, `mvwatcherclient`). A dev/third-party
+  app's calls return nothing (ACG-denied); the system partition is read-only so you can't add
+  yourself; and a patched TV can't be rooted to reach `com.webos.app.multiview`. W3C PiP just
+  relocates the one pipeline. **A "1 big live + N small" multi-view in a web app can only be:
+  1 decoded main + side tiles as logo/EPG info cards** (swap a card into the main to make it
+  the live one).
+- **`canvas.drawImage(video)` reads the hardware video plane as BLACK** (C4, verified: avgLum 0
+  while the video decodes at 1280×720). Same reason CDP screenshots are black. So you cannot
+  snapshot/mirror the live video into a canvas — the side tiles above genuinely can't show any
+  video frame (not even a frozen one). Plan multi-channel UIs around info cards, not thumbnails.
 - **mediaOption** (native pipeline hints, escaped into the source type):
   ```js
   var o = { option: { mediaTransportType: "HLS",

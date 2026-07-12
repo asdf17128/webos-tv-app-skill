@@ -270,7 +270,9 @@ Full treatment in `reference/testing.md`. The parts people skip and regret:
 | Deploy auth fails | Dev Mode passphrase rotated | re-read passphrase, re-fetch SSH key |
 | User settings vanish after update | packaged-app localStorage/IDB wiped on app update | keep durable state in db8 (`com.palm.db`) |
 | 4K stream tops out at 1080p | native-HLS ABR default caps at 1920×1080 | mediaOption `adaptiveStreaming.maxWidth/maxHeight` |
-| Second video element blacks out first | one media pipeline per app | src-swap a single `<video>` + `.load()` |
+| Second video element blacks out first | one media pipeline per app (MSE shares it too) | src-swap a single `<video>` + `.load()` |
+| Multi-view/split-screen not working | `com.webos.service.multiviewcontroller` is ACG-locked to LG system apps | web-app multi-view = 1 live tile + logo/EPG info cards, not N videos |
+| Canvas thumbnail of live video is black | hardware video plane unreadable by canvas | don't snapshot video; use logos/EPG/poster images |
 | HTTPS works in browser, dies on TV | self-signed/untrusted cert fails silently for XHR/WSS | real cert (LE ≥ webOS 5.0) or plain HTTP on LAN |
 | Hook infinite loop | callback in `useEffect` deps | store callback in `useRef` |
 | CDN 403 | sent `Origin` header to CDN | drop `Origin` on CDN requests |
